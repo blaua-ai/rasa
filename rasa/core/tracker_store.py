@@ -468,6 +468,7 @@ class MongoTrackerStore(TrackerStore):
         host: Optional[Text] = "mongodb://localhost:27017",
         db: Optional[Text] = "rasa",
         rasaDB: Optional[Text] = None,
+        setConversation: Optional[bool] = False,
         username: Optional[Text] = None,
         password: Optional[Text] = None,
         auth_source: Optional[Text] = "admin",
@@ -517,12 +518,23 @@ class MongoTrackerStore(TrackerStore):
 
         additional_events = self._additional_events(tracker)
         
-        search = self.conversations.find_one({"sender_id": tracker.sender_id}, {"sender_id" : 1})
+        search = self.conversations.find_one({"sender_id": tracker.sender_id}, {"sender_id" : 1, "events": 1})
         first = search is None
 
         if first: 
             self.db.stats.update_one({"name": "stats"}, { "$inc": { "impressions": 1 }}, upsert=True)
             self.rasaDB.stats.update_one({"name": "stats"}, { "$inc": { "impressions": 1 }}, upsert=True)
+        else:
+            if not setConversation:
+                count = 0
+                for elem in events["events"]:
+                    if elem["event"] == "user":
+                        count += 1
+                    if count == 2:
+                        self.db.stats.update_one({"name": "stats"}, { "$inc": { "conversations": 1 }}, upsert=True)
+                        self.rasaDB.stats.update_one({"name": "stats"}, { "$inc": { "conversations": 1 }}, upsert=True)
+                        self.setConversation = True
+                        break
 
         self.conversations.update_one(
             {"sender_id": tracker.sender_id},
