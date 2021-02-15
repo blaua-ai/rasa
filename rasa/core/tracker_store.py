@@ -499,6 +499,7 @@ class MongoTrackerStore(TrackerStore):
     def _ensure_indices(self):
         """Create an index on the sender_id"""
         self.conversations.create_index("sender_id")
+        self.db.stats.update_one({"name": "stats"}, { "$inc": { "impressions": 1 }}, upsert=True)
 
     @staticmethod
     def _current_tracker_state_without_events(tracker: DialogueStateTracker) -> Dict:
