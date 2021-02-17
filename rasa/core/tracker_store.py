@@ -468,7 +468,7 @@ class MongoTrackerStore(TrackerStore):
         host: Optional[Text] = "mongodb://localhost:27017",
         db: Optional[Text] = "rasa",
         rasaDB: Optional[Text] = None,
-        setConversation: Optional[bool] = False,
+        setConversation: bool = False,
         username: Optional[Text] = None,
         password: Optional[Text] = None,
         auth_source: Optional[Text] = "admin",
@@ -527,7 +527,7 @@ class MongoTrackerStore(TrackerStore):
         else:
             if not setConversation:
                 count = 0
-                for elem in events["events"]:
+                for elem in search["events"]:
                     if elem["event"] == "user":
                         count += 1
                     if count == 2:
