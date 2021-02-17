@@ -467,8 +467,8 @@ class MongoTrackerStore(TrackerStore):
         domain: Domain,
         host: Optional[Text] = "mongodb://localhost:27017",
         db: Optional[Text] = "rasa",
-        # rasaDB: Optional[Text] = None,
-        setConversation: bool = False,
+        rasaDB: Optional[Text] = None,
+        # setConversation: bool = False,
         username: Optional[Text] = None,
         password: Optional[Text] = None,
         auth_source: Optional[Text] = "admin",
@@ -486,7 +486,7 @@ class MongoTrackerStore(TrackerStore):
             # delay connect until process forking is done
             connect=False,
         )
-        # self.rasaDB = self.client.rasa
+        self.rasaDB = self.client.rasa
         self.db = Database(self.client, db)
         self.collection = collection
         super().__init__(domain, event_broker)
@@ -523,18 +523,19 @@ class MongoTrackerStore(TrackerStore):
 
         if first: 
             self.db.stats.update_one({"name": "stats"}, { "$inc": { "impressions": 1 }}, upsert=True)
-            # self.rasaDB.stats.update_one({"name": "stats"}, { "$inc": { "impressions": 1 }}, upsert=True)
-        else:
-            if not setConversation:
-                count = 0
-                for elem in search["events"]:
-                    if elem["event"] == "user":
-                        count += 1
-                    if count == 2:
-                        self.db.stats.update_one({"name": "stats"}, { "$inc": { "conversations": 1 }}, upsert=True)
-                        # self.rasaDB.stats.update_one({"name": "stats"}, { "$inc": { "conversations": 1 }}, upsert=True)
-                        self.setConversation = True
-                        break
+            self.rasaDB.stats.update_one({"name": "stats"}, { "$inc": { "impressions": 1 }}, upsert=True)
+        # else:
+        #     if not setConversation:
+        #         count = 0
+        #         self.db.stats.update_one({"name": "test"}, { "$inc": { "i": 1 }}, upsert=True)
+        #         for elem in search["events"]:
+        #             if elem["event"] == "user":
+        #                 count += 1
+        #             if count == 2:
+        #                 self.db.stats.update_one({"name": "stats"}, { "$inc": { "conversations": 1 }}, upsert=True)
+        #                 # self.rasaDB.stats.update_one({"name": "stats"}, { "$inc": { "conversations": 1 }}, upsert=True)
+        #                 self.setConversation = True
+        #                 break
 
         self.conversations.update_one(
             {"sender_id": tracker.sender_id},
