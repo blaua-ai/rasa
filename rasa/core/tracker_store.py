@@ -467,13 +467,10 @@ class MongoTrackerStore(TrackerStore):
         domain: Domain,
         host: Optional[Text] = "mongodb://localhost:27017",
         db: Optional[Text] = "rasa",
-        rasaDB: Optional[Text] = None,
-        # setConversation: bool = False,
         username: Optional[Text] = None,
         password: Optional[Text] = None,
         auth_source: Optional[Text] = "admin",
         collection: Optional[Text] = "conversations",
-        backup: Optional[Text] = "backup",
         event_broker: Optional[EventBroker] = None,
     ):
         from pymongo.database import Database
@@ -487,7 +484,7 @@ class MongoTrackerStore(TrackerStore):
             # delay connect until process forking is done
             connect=False,
         )
-        self.rasaDB = self.client.rasa
+
         self.db = Database(self.client, db)
         self.collection = collection
         super().__init__(domain, event_broker)
@@ -498,16 +495,10 @@ class MongoTrackerStore(TrackerStore):
     def conversations(self):
         """Returns the current conversation"""
         return self.db[self.collection]
-    
-    @property
-    def backup(self):
-        """Returns the current conversation"""
-        return self.db[self.backup]
 
     def _ensure_indices(self):
         """Create an index on the sender_id"""
         self.conversations.create_index("sender_id")
-        self.backup.create_index("sender_id")
 
     @staticmethod
     def _current_tracker_state_without_events(tracker: DialogueStateTracker) -> Dict:
@@ -524,38 +515,8 @@ class MongoTrackerStore(TrackerStore):
             self.stream_events(tracker)
 
         additional_events = self._additional_events(tracker)
-        
-        # search = self.conversations.find_one({"sender_id": tracker.sender_id}, {"sender_id" : 1, "events": 1})
-        # first = search is None
-
-        # if first: 
-        #     self.db.stats.update_one({"name": "stats"}, { "$inc": { "impressions": 1 }}, upsert=True)
-        #     self.rasaDB.stats.update_one({"name": "stats"}, { "$inc": { "impressions": 1 }}, upsert=True)
-        # # else:
-        # #     if not setConversation:
-        # #         count = 0
-        # #         self.db.stats.update_one({"name": "test"}, { "$inc": { "i": 1 }}, upsert=True)
-        # #         for elem in search["events"]:
-        # #             if elem["event"] == "user":
-        # #                 count += 1
-        # #             if count == 2:
-        # #                 self.db.stats.update_one({"name": "stats"}, { "$inc": { "conversations": 1 }}, upsert=True)
-        # #                 # self.rasaDB.stats.update_one({"name": "stats"}, { "$inc": { "conversations": 1 }}, upsert=True)
-        # #                 self.setConversation = True
-        # #                 break
 
         self.conversations.update_one(
-            {"sender_id": tracker.sender_id},
-            {
-                "$set": self._current_tracker_state_without_events(tracker),
-                "$push": {
-                    "events": {"$each": [e.as_dict() for e in additional_events]}
-                },
-            },
-            upsert=True,
-        )
-
-        self.backup.update_one(
             {"sender_id": tracker.sender_id},
             {
                 "$set": self._current_tracker_state_without_events(tracker),
